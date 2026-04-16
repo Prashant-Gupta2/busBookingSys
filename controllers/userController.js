@@ -1,35 +1,48 @@
 const db = require("../utils/dbConnection");
+const Users = require("../models/users");
 
-const addUserDetails = (req,res) =>{
-  const {name,email} = req.body;
+const addUserDetails = async(req,res) =>{
+  try{
+    const {name,email} = req.body;
+     const user = await Users.create({
+      name,
+      email
+    });
 
-  const addUsers = `insert into Users(name,email)
-   values(?,?);
-  `
-  db.execute(addUsers,[name,email],(err)=>{
-   if(err){
-    res.status(500).send(err.message);
-    db.end();
-    return;
-   }
-   res.status(200).send("User Added Successfully!");
-   console.log("User added!");
-  })
+    return res.status(201).json({
+      message: "User created successfully",
+      data: user
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      message: "Internal Server Error"
+    });
+  }
 }
 
-const getUserDetails = (req,res) =>{
-  const getAllUser =`select * from Users`;
-  db.execute(getAllUser,(err,result)=>{
-   if(err){
-    res.status(500).send(err.message);
-    db.end();
-    return;
-   }
-   if(result.affectedRows === 0){
-     res.status(404).send("Record not found!");
-     return;
-   }
-   res.send(result);
-  })
+const getUserDetails = async (req,res) =>{
+  try {
+    const users = await Users.findAll();
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({
+        message: "No users found",
+        data: []
+      });
+    }
+    return res.status(200).json({
+      message: "Users fetched successfully",
+      count: users.length,
+      data: users
+    });
+  }
+  catch(err){
+    console.error(err)
+    return res.status(500).json({
+      message:"Internal server Error"
+    })
+  }
 }
 module.exports = {getUserDetails,addUserDetails};

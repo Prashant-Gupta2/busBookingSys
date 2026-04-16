@@ -1,35 +1,57 @@
 const db = require("../utils/dbConnection");
+const Buses = require("../models/Buses");
+const {Op} = require("sequelize")
 
-const addBusDetails = (req,res) =>{
- const {bus_number,total_seats,available_seats} = req.body;
- const addBus =`insert into Buses(busNumber,totalSeats,availableSeats)
- values(?,?,?);
- `
- db.execute(addBus,[bus_number,total_seats,available_seats],(err)=>{
- if(err){
-  res.status(500).send(err.message);
-  db.end();
-  return;
- }
- res.status(200).send("Bus details added!");
- console.log("Bus details added!");
- })
-}
-const getBusDetails = (req,res) =>{
-  const {seats} = req.params;
-  const getAllBuses =`select * from Buses where availableSeats > ? `;
-  db.execute(getAllBuses,[seats],(err,result)=>{
-    if(err){
-      res.status(500).send(err.message);
-      db.end()
-      return;
+const addBusDetails = async (req, res) => {
+  try {
+    const { busNumber, totalSeats, availableSeats } = req.body;
+
+    const buses = await Buses.create({
+      busNumber,
+      totalSeats,
+      availableSeats
+    });
+
+    return res.status(201).json({
+      message: "Bus details Added",
+      data: buses
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      message: "Internal server error"
+    });
+  }
+};
+const getBusDetails = async (req, res) => {
+  try {
+    const requiredSeats = parseInt(req.params.seats);
+
+    const buses = await Buses.findAll({
+      where: {
+        availableSeats: {
+         [Op.gte]: requiredSeats // available > required
+        }
+      }
+    });
+      if (!buses) {
+      return res.status(404).json({
+        message: "No buses available"
+      });
     }
-    if(result.affectedRows === 0){
-      res.status(404).send("Record not found!");
-      return;
-    }
-    res.send(result)
-  })
-}
+    return res.status(200).json({
+      message: "Buses fetched successfully!",
+      count: buses.length,
+      data: buses
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      message: "Internal server error"
+    });
+  }
+};
 
 module.exports ={addBusDetails,getBusDetails};
